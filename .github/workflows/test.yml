@@ -12,21 +12,21 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: shellcheck --version && shellcheck -x -P scripts scripts/*.sh test/run.sh test/bin/*
 
   stubbed:
     # Both modes end to end with test/bin's stand-ins for gh, git push and anysola.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: bash test/run.sh
 
   no-token:
     # The action through action.yml: an empty token fails before anything is installed.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - id: action
         uses: ./
         continue-on-error: true

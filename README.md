@@ -42,7 +42,7 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
       - uses: Anysola/code-action@v1
@@ -80,7 +80,7 @@ jobs:
       (github.event_name == 'issues' && github.event.label.name == 'anysola')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
       - uses: Anysola/code-action@v1
