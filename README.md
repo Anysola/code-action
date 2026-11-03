@@ -135,10 +135,13 @@ Every run spends credits from the Anysola account the token belongs to, at the s
 
 ## Errors
 
+The token is checked with Anysola before anything is installed, so most of these fail in a second and spend nothing.
+
 | Message                     | What to do                                                                                   |
 | --------------------------- | -------------------------------------------------------------------------------------------- |
 | The token input is empty    | Add the `ANYSOLA_TOKEN` secret. Fork pull requests get no secrets.                            |
 | ANYSOLA_TOKEN was refused   | The token expired or was revoked. Make a new one and update the secret.                      |
+| isn't available to this account | The plan doesn't include that model; the message lists the ones it has.                  |
 | Stopped at the budget       | Raise `budget`, or narrow the request.                                                       |
 | Out of Anysola credits      | Credits renew with the plan's cycle; packs are in [Billing](https://account.anysola.com/billing). |
 
