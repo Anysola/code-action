@@ -1,0 +1,39 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck --version && shellcheck -x -P scripts scripts/*.sh test/run.sh test/bin/*
+
+  stubbed:
+    # Both modes end to end with test/bin's stand-ins for gh, git push and anysola.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash test/run.sh
+
+  no-token:
+    # The action through action.yml: an empty token fails before anything is installed.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: action
+        uses: ./
+        continue-on-error: true
+        with:
+          token: ""
+          mode: review
+      - name: It failed
+        run: test "${{ steps.action.outcome }}" = failure
+      - name: Nothing was installed
+        run: test ! -e "$HOME/.anysola/bin/anysola"

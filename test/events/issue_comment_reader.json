@@ -1,0 +1,29 @@
+{
+  "action": "created",
+  "issue": {
+    "number": 7,
+    "title": "Add a greet helper",
+    "body": "util.js should export `greet(name)` returning `Hello, <name>!`.",
+    "user": {
+      "login": "someone",
+      "id": 2002
+    }
+  },
+  "comment": {
+    "id": 555,
+    "body": "  /anysola please add it, with a test if there is a test setup",
+    "author_association": "NONE",
+    "user": {
+      "login": "visitor",
+      "id": 3003
+    }
+  },
+  "repository": {
+    "full_name": "acme/widgets",
+    "default_branch": "main"
+  },
+  "sender": {
+    "login": "visitor",
+    "id": 1001
+  }
+}

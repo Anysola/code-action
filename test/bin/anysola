@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# A stand-in for `anysola run --format json` in the action's tests. It saves
+# the prompt and the parts of its environment the tests check, then plays
+# $STUB_AGENT: review, edit, answer, budget, credits or revoked.
+set -euo pipefail
+state=${STUB_STATE:?}
+if [ "${1:-}" = --version ]; then
+  echo "Anysola Code 0.0.0-stub"
+  exit 0
+fi
+cat >"$state/prompt.md"
+printf '%s\n' "$*" >"$state/anysola.args"
+{
+  printf 'ANYSOLA_TOKEN=%s\n' "${ANYSOLA_TOKEN:+set}"
+  printf 'GH_TOKEN=%s\n' "${GH_TOKEN:+set}"
+  printf 'GITHUB_TOKEN=%s\n' "${GITHUB_TOKEN:+set}"
+  printf 'INPUT_TOKEN=%s\n' "${INPUT_TOKEN:+set}"
+  printf 'OPENCODE_CONFIG_CONTENT=%s\n' "${OPENCODE_CONFIG_CONTENT:+set}"
+  printf 'OPENCODE_DISABLE_PROJECT_CONFIG=%s\n' "${OPENCODE_DISABLE_PROJECT_CONFIG:-}"
+} >"$state/anysola.env"
+
+text() { jq -nc --arg m "$1" --arg t "$2" '{type: "text", timestamp: 1, sessionID: "ses_stub", part: {messageID: $m, type: "text", text: $t}}'; }
+error() { jq -nc --arg t "$1" '{type: "error", timestamp: 1, sessionID: "ses_stub", error: {name: "APIError", message: $t}}'; }
+
+echo "not json: a stray log line"
+case "${STUB_AGENT:-review}" in
+  review)
+    text msg_1 "Let me read util.js first."
+    text msg_2 "Adds greet(); ready to merge."
+    # shellcheck disable=SC2016 # Markdown backticks
+    text msg_2 '- `util.js:3`: no input check; `greet()` prints "Hello, undefined!".'
+    ;;
+  edit)
+    # shellcheck disable=SC2016 # a JavaScript template string
+    printf 'export const greet = (name) => `Hello, ${name}!`\n' >greet.js
+    text msg_1 "Added greet.js exporting greet(name)."
+    ;;
+  answer)
+    text msg_1 "The build script runs tsc, then bundles with esbuild."
+    ;;
+  budget)
+    error "Budget reached: 104/100 credits. Continue with \`anysola run -s ses_stub --budget <credits>\`."
+    exit 1
+    ;;
+  credits)
+    error "You've used this cycle's Anysola credits. They renew on 1 Dec. account.anysola.com/billing"
+    exit 1
+    ;;
+  revoked)
+    error "Anysola Code token expired or revoked. Run \`anysola login\`."
+    exit 1
+    ;;
+esac

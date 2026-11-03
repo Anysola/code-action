@@ -1,0 +1,76 @@
+name: Anysola Code
+description: Review pull requests and turn issues into pull requests with Anysola Code.
+author: Anysola
+branding:
+  icon: terminal
+  color: gray-dark
+
+inputs:
+  token:
+    description: An Anysola Code CI token (account.anysola.com/apps, Code > New CI token), passed as secrets.ANYSOLA_TOKEN.
+    required: true
+  mode:
+    description: "`review` (a pull request), `issue` (an issue, a /anysola comment or the label), or `auto` to pick from the event."
+    required: false
+    default: auto
+  model:
+    description: The model, such as claude-sonnet-5-5, claude-haiku-5-5 or claude-opus-5-5.
+    required: false
+    default: claude-sonnet-5-5
+  budget:
+    description: Credits one run may spend before Anysola Code stops it (1 credit is $0.01).
+    required: false
+    default: "100"
+  prompt:
+    description: Extra instructions added to the agent's prompt.
+    required: false
+    default: ""
+  version:
+    description: The Anysola Code version to install, or `latest`.
+    required: false
+    default: latest
+  trigger:
+    description: The comment prefix that starts issue mode.
+    required: false
+    default: /anysola
+  label:
+    description: The issue label that starts issue mode when it is added. Empty turns labels off.
+    required: false
+    default: anysola
+  max-diff-bytes:
+    description: How much of a pull request's diff goes into the review prompt; the agent reads files for the rest.
+    required: false
+    default: "120000"
+  github-token:
+    description: The token for comments, the push and the pull request. A personal or app token lets the new pull request start workflows.
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  mode:
+    description: "`review`, `issue`, or `skip` when the event asked for nothing."
+    value: ${{ steps.run.outputs.mode }}
+  comment-url:
+    description: The review comment, or the reply on the issue.
+    value: ${{ steps.run.outputs.comment-url }}
+  pr-url:
+    description: The pull request issue mode opened.
+    value: ${{ steps.run.outputs.pr-url }}
+
+runs:
+  using: composite
+  steps:
+    - id: run
+      shell: bash
+      env:
+        INPUT_TOKEN: ${{ inputs.token }}
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_MODEL: ${{ inputs.model }}
+        INPUT_BUDGET: ${{ inputs.budget }}
+        INPUT_PROMPT: ${{ inputs.prompt }}
+        INPUT_VERSION: ${{ inputs.version }}
+        INPUT_TRIGGER: ${{ inputs.trigger }}
+        INPUT_LABEL: ${{ inputs.label }}
+        INPUT_MAX_DIFF_BYTES: ${{ inputs.max-diff-bytes }}
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/main.sh"

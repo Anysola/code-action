@@ -1,0 +1,14 @@
+{
+  "action": "opened",
+  "number": 12,
+  "pull_request": {
+    "number": 12,
+    "title": "Add a greet helper",
+    "body": "Adds `greet(name)` to util.js.",
+    "draft": false,
+    "base": { "ref": "main", "sha": "BASE_SHA" },
+    "head": { "ref": "feature/greet", "sha": "HEAD_SHA", "repo": { "full_name": "acme/widgets" } }
+  },
+  "repository": { "full_name": "acme/widgets", "default_branch": "main" },
+  "sender": { "login": "mert", "id": 1001 }
+}

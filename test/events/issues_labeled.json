@@ -1,0 +1,12 @@
+{
+  "action": "labeled",
+  "label": { "name": "anysola" },
+  "issue": {
+    "number": 8,
+    "title": "Explain the build",
+    "body": "How does the build script work?",
+    "user": { "login": "someone", "id": 2002 }
+  },
+  "repository": { "full_name": "acme/widgets", "default_branch": "main" },
+  "sender": { "login": "mert", "id": 1001 }
+}

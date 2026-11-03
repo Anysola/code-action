@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# git for the action's tests: everything goes to the real git except the
+# network, which a test repository has none of. `push` and `ls-remote` are
+# logged and answered here.
+set -euo pipefail
+here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+real=""
+IFS=: read -ra dirs <<<"$PATH"
+for d in "${dirs[@]}"; do
+  if [ "$d" != "$here" ] && [ -x "$d/git" ]; then
+    real=$d/git
+    break
+  fi
+done
+[ -n "$real" ] || { echo "git stub: no real git on PATH" >&2; exit 1; }
+
+for arg in "$@"; do
+  case "$arg" in
+    push)
+      # The URL carries the token: log it with the token masked.
+      printf 'push %s\n' "$(printf '%s ' "$@" | sed -E 's#x-access-token:[^@]*@#x-access-token:***@#')" >>"${STUB_STATE:?}/git.log"
+      exit 0
+      ;;
+    ls-remote)
+      [ -n "${STUB_BRANCH_EXISTS:-}" ] && exit 0
+      exit 2
+      ;;
+  esac
+done
+exec "$real" "$@"

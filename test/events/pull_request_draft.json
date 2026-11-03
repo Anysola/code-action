@@ -1,0 +1,14 @@
+{
+  "action": "opened",
+  "number": 13,
+  "pull_request": {
+    "number": 13,
+    "title": "WIP",
+    "body": "",
+    "draft": true,
+    "base": { "ref": "main", "sha": "BASE_SHA" },
+    "head": { "ref": "wip", "sha": "HEAD_SHA", "repo": { "full_name": "acme/widgets" } }
+  },
+  "repository": { "full_name": "acme/widgets", "default_branch": "main" },
+  "sender": { "login": "mert", "id": 1001 }
+}

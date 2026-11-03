@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# A stand-in for the GitHub CLI in the action's tests: answers the calls the
+# scripts make from files under $STUB_STATE and logs every call's arguments.
+set -euo pipefail
+state=${STUB_STATE:?}
+printf '%s\n' "$*" >>"$state/gh.log"
+
+if [ "$1" = pr ] && [ "$2" = diff ]; then
+  [ -z "${STUB_DIFF_FAIL:-}" ] || { echo "could not find pull request diff: too large" >&2; exit 1; }
+  cat "$STUB_DIFF"
+  exit 0
+fi
+
+if [ "$1" = pr ] && [ "$2" = create ]; then
+  shift 2
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --body-file) cp "$2" "$state/pr-body.md"; shift 2 ;;
+      --title) printf '%s' "$2" >"$state/pr-title.txt"; shift 2 ;;
+      --base) printf '%s' "$2" >"$state/pr-base.txt"; shift 2 ;;
+      --head) printf '%s' "$2" >"$state/pr-head.txt"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+  echo "https://github.com/$GITHUB_REPOSITORY/pull/99"
+  exit 0
+fi
+
+if [ "$1" = api ]; then
+  shift
+  method=GET
+  path=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -X) method=$2; shift 2 ;;
+      --paginate) shift ;;
+      --input) shift 2 ;;
+      -f | -F) shift 2 ;;
+      *) path=$1; shift ;;
+    esac
+  done
+  case "$method $path" in
+    "GET repos/"*"/collaborators/"*"/permission")
+      user=${path#*/collaborators/}
+      user=${user%/permission}
+      perm="write"
+      [ "$user" = "${STUB_READER:-visitor}" ] && perm="read"
+      printf '{"permission":"%s","role_name":"%s"}\n' "$perm" "$perm"
+      ;;
+    "GET repos/"*"/issues/"*"/comments"*)
+      # One page, as --paginate prints it.
+      if [ -n "${STUB_COMMENTS:-}" ]; then cat "$STUB_COMMENTS"; else echo '[]'; fi
+      ;;
+    "POST repos/"*"/reactions")
+      echo '{"id":1,"content":"eyes"}'
+      ;;
+    "POST repos/"*"/comments" | "PATCH repos/"*"/comments/"*)
+      n=1
+      for f in "$state"/comment-*.json; do [ -e "$f" ] && n=$((n + 1)); done
+      cat >"$state/comment-$n.json"
+      printf '%s %s\n' "$method" "$path" >"$state/comment-$n.req"
+      printf '{"id":%s,"html_url":"https://github.com/%s/issues/1#issuecomment-%s"}\n' "$((900 + n))" "$GITHUB_REPOSITORY" "$((900 + n))"
+      ;;
+    *)
+      echo "gh stub: no answer for $method $path" >&2
+      exit 1
+      ;;
+  esac
+  exit 0
+fi
+
+echo "gh stub: unexpected call: $*" >&2
+exit 1
