@@ -37,7 +37,7 @@ if [ "$size" -gt "$INPUT_MAX_DIFF_BYTES" ]; then
   head -c "$INPUT_MAX_DIFF_BYTES" "$diff_file" >"$diff_file.cut" && mv "$diff_file.cut" "$diff_file"
   truncated=" It is cut at $INPUT_MAX_DIFF_BYTES of its $size bytes; read the files for the rest."
 fi
-files=$(grep -E '^diff --git ' "$diff_file" | sed -E 's|^diff --git a/(.*) b/.*$|\1|' | head -n 300)
+files=$(grep -E '^diff --git ' "$diff_file" | sed -E 's|^diff --git a/(.*) b/.*$|\1|' | head -n 300 || true)
 
 prompt=$AGENT_DIR/prompt.md
 {
@@ -81,11 +81,12 @@ body=$AGENT_DIR/comment.md
 
 # The comment this action left before, found by its marker.
 existing=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$pr/comments?per_page=100" |
-  jq -rs --arg marker "$MARKER" '[.[][] | select(.body | contains($marker)) | .id] | first // empty')
+  jq -rs --arg marker "$MARKER" '[.[][] | select(.body | contains($marker)) | .id] | first // empty') ||
+  fail "Could not read the comments on #$pr. The job needs pull-requests: write."
 if [ -n "$existing" ]; then
-  url=$(comment_write PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" "$body")
+  url=$(comment_write PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" "$body" || true)
 else
-  url=$(comment_write POST "repos/$GITHUB_REPOSITORY/issues/$pr/comments" "$body")
+  url=$(comment_write POST "repos/$GITHUB_REPOSITORY/issues/$pr/comments" "$body" || true)
 fi
 [ -n "$url" ] || fail "Could not post the review on #$pr. The job needs pull-requests: write."
 set_output comment-url "$url"

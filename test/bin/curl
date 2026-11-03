@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# curl for the action's tests: answers the token check (GET /v1/code/config)
+# from $STUB_CONFIG (ok, 401, 403 or down) and records whether the token
+# came on stdin. STUB_CURL=real hands every call to the real curl.
+set -euo pipefail
+here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+if [ "${STUB_CURL:-}" = real ]; then
+  IFS=: read -ra dirs <<<"$PATH"
+  for d in "${dirs[@]}"; do
+    if [ "$d" != "$here" ] && [ -x "$d/curl" ]; then exec "$d/curl" "$@"; fi
+  done
+  echo "curl stub: no real curl on PATH" >&2
+  exit 1
+fi
+
+out=/dev/stdout
+url=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -K)
+      [ "$2" = - ] && grep -q '^header = "Authorization: Bearer asc_' && echo stdin >"${STUB_STATE:?}/curl.token"
+      shift 2
+      ;;
+    -o) out=$2; shift 2 ;;
+    -H | -w | --max-time) shift 2 ;;
+    -*) shift ;;
+    *) url=$1; shift ;;
+  esac
+done
+case "$url" in
+  */v1/code/config) ;;
+  *) echo "curl stub: unexpected $url" >&2; exit 1 ;;
+esac
+printf '%s\n' "$url" >>"$STUB_STATE/curl.log"
+case "${STUB_CONFIG:-ok}" in
+  ok)
+    printf '{"providers":{"anysola":{"models":{"claude-sonnet-5-5":{},"claude-haiku-5-5":{}}}}}' >"$out"
+    printf 200
+    ;;
+  401)
+    # shellcheck disable=SC2016 # Markdown backticks in the message
+    printf '{"type":"error","error":{"type":"authentication_error","message":"Anysola Code token expired or revoked. Run `anysola login`."}}' >"$out"
+    printf 401
+    ;;
+  403)
+    printf '{"type":"error","error":{"type":"permission_error","message":"Anysola Code needs a Pro or Team plan: https://account.anysola.com/billing"}}' >"$out"
+    printf 403
+    ;;
+  down)
+    echo "curl: (7) Failed to connect" >&2
+    exit 7
+    ;;
+esac

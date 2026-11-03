@@ -55,6 +55,10 @@ if [ "$1" = api ]; then
       echo '{"id":1,"content":"eyes"}'
       ;;
     "POST repos/"*"/comments" | "PATCH repos/"*"/comments/"*)
+      if [ -n "${STUB_GH_DENY:-}" ]; then
+        echo "HTTP 403: Resource not accessible by integration" >&2
+        exit 1
+      fi
       n=1
       for f in "$state"/comment-*.json; do [ -e "$f" ] && n=$((n + 1)); done
       cat >"$state/comment-$n.json"

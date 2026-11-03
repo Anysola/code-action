@@ -93,8 +93,7 @@ log "Working on #$issue for @$actor with $(model_ref "$INPUT_MODEL"), up to $INP
 status=0
 run_agent edit "$prompt" || status=$?
 if [ "$status" -ne 0 ]; then
-  reason=$(explain_failure "$status")
-  refuse "Anysola Code stopped before finishing. $reason"
+  refuse "$(explain_failure "$status")"
 fi
 answer=$AGENT_DIR/answer.md
 
@@ -103,7 +102,7 @@ if [ -z "$(git status --porcelain)" ] && [ "$(git rev-parse HEAD)" = "$start_sha
   [ -s "$answer" ] || printf 'Anysola Code finished without changing files or writing an answer.' >"$answer"
   reply=$AGENT_DIR/reply.md
   { cat "$answer"; footer; } >"$reply"
-  url=$(comment_write POST "repos/$GITHUB_REPOSITORY/issues/$issue/comments" "$reply")
+  url=$(comment_write POST "repos/$GITHUB_REPOSITORY/issues/$issue/comments" "$reply" || true)
   [ -n "$url" ] || fail "Could not comment on #$issue. The job needs issues: write."
   set_output comment-url "$url"
   log "No changes; answered: $url"

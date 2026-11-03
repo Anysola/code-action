@@ -72,6 +72,7 @@ if [ -n "${ANYSOLA_CODE_BIN:-}" ]; then
   : "${ANYSOLA_TOKEN:?the live cases need ANYSOLA_TOKEN}"
   LIVE_BIN=$ANYSOLA_CODE_BIN LIVE_TOKEN=$ANYSOLA_TOKEN LIVE_MODEL=${LIVE_MODEL:-claude-haiku-5-5}
   unset ANYSOLA_TOKEN
+  export STUB_CURL=real
 
   current=live-review
   setup "$current"
@@ -115,6 +116,36 @@ current=bad-budget
 setup "$current"
 run_action pull_request pull_request.json INPUT_BUDGET=lots
 expect "fails on a budget that isn't a number" has "$STUB_STATE/stdout" "budget must be a whole number"
+
+current=token-refused
+setup "$current"
+run_action pull_request pull_request.json STUB_CONFIG=401
+expect "fails" test "$status" -eq 1
+expect "says the token was refused" has "$STUB_STATE/stdout" "ANYSOLA_TOKEN was refused: it expired or was revoked"
+expect "never runs the agent" test ! -e "$STUB_STATE/anysola.args"
+expect "sends the token on stdin, not in argv" test "$(cat "$STUB_STATE/curl.token")" = stdin
+
+current=no-access
+setup "$current"
+run_action pull_request pull_request.json STUB_CONFIG=403
+expect "passes Anysola's reason on" has "$STUB_STATE/stdout" "refused the token: Anysola Code needs a Pro or Team plan"
+
+current=model-not-in-plan
+setup "$current"
+run_action pull_request pull_request.json INPUT_MODEL=claude-opus-5-5
+expect "names the models the account has" has "$STUB_STATE/stdout" "claude-opus-5-5 isn't available to this account. Its models: claude-haiku-5-5, claude-sonnet-5-5."
+
+current=gateway-down
+setup "$current"
+run_action pull_request pull_request.json STUB_CONFIG=down
+expect "goes on when the check can't be made" test "$status" -eq 0
+expect "says so in the log" has "$STUB_STATE/stderr" "Could not check the token with Anysola"
+
+current=review-no-comment-permission
+setup "$current"
+run_action pull_request pull_request.json STUB_GH_DENY=1
+expect "fails" test "$status" -eq 1
+expect "names the permission" has "$STUB_STATE/stdout" "The job needs pull-requests: write."
 
 current=review
 setup "$current"

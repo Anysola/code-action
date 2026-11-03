@@ -98,6 +98,7 @@ if ! [[ $ANYSOLA_SECRET =~ ^asc_[0-9A-Za-z]{40}$ ]]; then
   fail "The token input isn't an Anysola Code token (asc_ and 40 letters and digits). Check the ANYSOLA_TOKEN secret."
 fi
 export ANYSOLA_SECRET
+check_access
 
 # shellcheck source=scripts/install.sh
 . "$here/install.sh"

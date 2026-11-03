@@ -60,6 +60,42 @@ repo_permission() {
     jq -r '.role_name // .permission // empty'
 }
 
+# Asks Anysola Code what the token may use before anything is installed or
+# spent (no model call): a refused token, a closed account or a model the
+# plan lacks fails here with Anysola's reason. A gateway that doesn't answer
+# is left to the run itself. The token goes to curl on stdin, not in argv.
+check_access() {
+  local api=${ANYSOLA_API_URL:-https://api.anysola.com} body code models
+  body=$(mktemp)
+  code=$(printf 'header = "Authorization: Bearer %s"\n' "$ANYSOLA_SECRET" |
+    curl -sS --max-time 20 -K - -H "x-anysola-client: opencode" -o "$body" -w '%{http_code}' \
+      "${api%/}/v1/code/config" 2>/dev/null) || code=000
+  case "$code" in
+    200)
+      models=$(jq -r '.providers.anysola.models // {} | keys | join(", ")' "$body" 2>/dev/null || true)
+      rm -f "$body"
+      local id=${INPUT_MODEL#anysola/}
+      if [ -n "$models" ] && [[ ", $models, " != *", $id, "* ]]; then
+        fail "$id isn't available to this account. Its models: $models."
+      fi
+      ;;
+    401)
+      rm -f "$body"
+      fail "ANYSOLA_TOKEN was refused: it expired or was revoked. Make a new CI token in account.anysola.com/apps and update the secret."
+      ;;
+    403)
+      local message
+      message=$(jq -r '.error.message // empty' "$body" 2>/dev/null || true)
+      rm -f "$body"
+      fail "Anysola Code refused the token: ${message:-no access}"
+      ;;
+    *)
+      rm -f "$body"
+      log "Could not check the token with Anysola (HTTP $code); trying the run anyway."
+      ;;
+  esac
+}
+
 # The review agent: reads, searches and globs the checkout, nothing else.
 # Rules are matched last to first, so the denies for env files come after
 # the read allow.
@@ -106,7 +142,7 @@ run_agent() {
   # No message argument: the prompt comes on stdin, which has no length limit.
   env -u GH_TOKEN -u GITHUB_TOKEN -u INPUT_TOKEN -u INPUT_GITHUB_TOKEN \
     -u ACTIONS_RUNTIME_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL \
-    ANYSOLA_TOKEN="$ANYSOLA_SECRET" OPENCODE_DISABLE_AUTOUPDATE=1 "${extra[@]}" \
+    ANYSOLA_TOKEN="$ANYSOLA_SECRET" OPENCODE_DISABLE_AUTOUPDATE=1 ${extra[@]+"${extra[@]}"} \
     "$ANYSOLA_BIN" "${args[@]}" <"$prompt" >"$AGENT_DIR/events.jsonl" 2>"$AGENT_DIR/stderr.log" || status=$?
 
   # Lines that aren't JSON (a stray log line) are skipped.
@@ -133,7 +169,7 @@ explain_failure() {
       printf 'Stopped at the budget of %s credits. Raise the budget input to let it finish.' "$INPUT_BUDGET" ;;
     *"used this cycle"*|*"Anysola credits"*|*"Daily free limit"*|*"may cost up to"*)
       printf 'Out of Anysola credits: %s' "$message" ;;
-    *"expired or revoked"*|*"authentication_error"*)
+    *"expired or revoked"*|*"authentication_error"*|*"Model unavailable: anysola/"*)
       printf 'ANYSOLA_TOKEN was refused: it expired or was revoked. Make a new CI token in account.anysola.com/apps and update the secret.' ;;
     *"needs a Pro or Team"*|*"isn't open to this account"*|*"isn’t open to this account"*|*"is paused"*)
       printf 'Anysola Code refused the request: %s' "$message" ;;
