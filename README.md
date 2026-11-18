@@ -1,5 +1,9 @@
 # Anysola Code for GitHub Actions
 
+> **Retired (2026-11-18).** This action ran the Anysola Code terminal app, which has been retired; it no longer
+> works, and CI tokens can no longer be created. Anysola Code is now a desktop app for Windows and Linux:
+> https://www.anysola.com/code. The text below is kept for reference.
+
 Runs [Anysola Code](https://www.anysola.com/code) in a workflow:
 
 - **Review**: on a pull request, a read-only agent reads the diff and the code around it and leaves one review comment, updated on every push.
